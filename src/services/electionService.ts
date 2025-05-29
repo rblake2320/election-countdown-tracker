@@ -32,29 +32,22 @@ export interface DatabaseCandidate {
 export const electionService = {
   async fetchElections(): Promise<Election[]> {
     try {
-      // Use rpc to query the elections table since it might not be in the generated types yet
+      console.log('Fetching elections from database...')
+      
+      // Fetch elections using type assertion since types aren't updated yet
       const { data: elections, error: electionsError } = await supabase
-        .rpc('get_elections')
-        .then(async () => {
-          // Fallback to direct query if RPC doesn't exist
-          return supabase
-            .from('elections' as any)
-            .select('*')
-            .order('election_dt', { ascending: true })
-        })
-        .catch(async () => {
-          // Direct query as final fallback
-          return supabase
-            .from('elections' as any)
-            .select('*')
-            .order('election_dt', { ascending: true })
-        })
+        .from('elections' as any)
+        .select('*')
+        .order('election_dt', { ascending: true })
 
       if (electionsError) {
         console.error('Error fetching elections:', electionsError)
         throw electionsError
       }
 
+      console.log('Elections fetched:', elections?.length || 0)
+
+      // Fetch candidates using type assertion
       const { data: candidates, error: candidatesError } = await supabase
         .from('candidates' as any)
         .select('*')
@@ -64,6 +57,8 @@ export const electionService = {
         console.error('Error fetching candidates:', candidatesError)
         throw candidatesError
       }
+
+      console.log('Candidates fetched:', candidates?.length || 0)
 
       // Group candidates by election
       const candidatesByElection = (candidates as DatabaseCandidate[])?.reduce((acc, candidate) => {
@@ -85,13 +80,14 @@ export const electionService = {
         candidates: candidatesByElection[election.id]?.map(candidate => ({
           name: candidate.name,
           party: candidate.party,
-          pollingPercentage: Math.round(candidate.poll_pct),
+          pollingPercentage: Math.round(candidate.poll_pct || 0),
           trend: Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'stable',
           endorsements: Math.floor(Math.random() * 20)
         })) || [],
         keyRaces: [election.office_name]
       })) || []
 
+      console.log('Transformed elections:', transformedElections.length)
       return transformedElections
     } catch (error) {
       console.error('Error in fetchElections:', error)
@@ -101,6 +97,7 @@ export const electionService = {
 
   async syncFECData(): Promise<void> {
     try {
+      console.log('Starting FEC data sync...')
       const { data, error } = await supabase.functions.invoke('fetch-fec-data')
       if (error) throw error
       console.log('FEC data sync completed:', data)
@@ -112,6 +109,7 @@ export const electionService = {
 
   async syncGoogleCivicData(): Promise<void> {
     try {
+      console.log('Starting Google Civic data sync...')
       const { data, error } = await supabase.functions.invoke('fetch-google-civic-data')
       if (error) throw error
       console.log('Google Civic data sync completed:', data)
@@ -123,8 +121,10 @@ export const electionService = {
 
   async syncServerTime(): Promise<number> {
     try {
+      console.log('Syncing server time...')
       const { data, error } = await supabase.functions.invoke('sync-time')
       if (error) throw error
+      console.log('Server time synced:', data.serverTime)
       return data.serverTime
     } catch (error) {
       console.error('Error syncing server time:', error)
