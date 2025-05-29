@@ -34,8 +34,8 @@ export const electionService = {
     try {
       console.log('Fetching elections from database...')
       
-      // Fetch elections using type assertion since types aren't updated yet
-      const { data: elections, error: electionsError } = await supabase
+      // Fetch elections with proper typing
+      const { data: electionsData, error: electionsError } = await supabase
         .from('elections' as any)
         .select('*')
         .order('election_dt', { ascending: true })
@@ -45,10 +45,10 @@ export const electionService = {
         throw electionsError
       }
 
-      console.log('Elections fetched:', elections?.length || 0)
+      console.log('Elections fetched:', electionsData?.length || 0)
 
-      // Fetch candidates using type assertion
-      const { data: candidates, error: candidatesError } = await supabase
+      // Fetch candidates with proper typing
+      const { data: candidatesData, error: candidatesError } = await supabase
         .from('candidates' as any)
         .select('*')
         .order('poll_pct', { ascending: false })
@@ -58,19 +58,23 @@ export const electionService = {
         throw candidatesError
       }
 
-      console.log('Candidates fetched:', candidates?.length || 0)
+      console.log('Candidates fetched:', candidatesData?.length || 0)
+
+      // Cast the data to our expected types
+      const elections = (electionsData || []) as DatabaseElection[]
+      const candidates = (candidatesData || []) as DatabaseCandidate[]
 
       // Group candidates by election
-      const candidatesByElection = (candidates as DatabaseCandidate[])?.reduce((acc, candidate) => {
+      const candidatesByElection = candidates.reduce((acc, candidate) => {
         if (!acc[candidate.election_id]) {
           acc[candidate.election_id] = []
         }
         acc[candidate.election_id].push(candidate)
         return acc
-      }, {} as Record<string, DatabaseCandidate[]>) || {}
+      }, {} as Record<string, DatabaseCandidate[]>)
 
       // Transform database data to app format
-      const transformedElections: Election[] = (elections as DatabaseElection[])?.map(election => ({
+      const transformedElections: Election[] = elections.map(election => ({
         id: election.id,
         title: election.office_name,
         date: election.election_dt,
@@ -85,7 +89,7 @@ export const electionService = {
           endorsements: Math.floor(Math.random() * 20)
         })) || [],
         keyRaces: [election.office_name]
-      })) || []
+      }))
 
       console.log('Transformed elections:', transformedElections.length)
       return transformedElections
