@@ -10,6 +10,7 @@ export interface DatabaseElection {
   election_dt: string
   is_special: boolean
   party_filter: string[]
+  description: string | null
   created_at: string
   updated_at: string
 }
@@ -23,16 +24,31 @@ export interface DatabaseCandidate {
   image_url: string | null
   poll_pct: number
   intent_pct: number
-  last_polled: string
+  last_polled: string | null
+  created_at: string
+  updated_at: string
 }
 
 export const electionService = {
   async fetchElections(): Promise<Election[]> {
     try {
+      // Use rpc to query the elections table since it might not be in the generated types yet
       const { data: elections, error: electionsError } = await supabase
-        .from('elections')
-        .select('*')
-        .order('election_dt', { ascending: true })
+        .rpc('get_elections')
+        .then(async () => {
+          // Fallback to direct query if RPC doesn't exist
+          return supabase
+            .from('elections' as any)
+            .select('*')
+            .order('election_dt', { ascending: true })
+        })
+        .catch(async () => {
+          // Direct query as final fallback
+          return supabase
+            .from('elections' as any)
+            .select('*')
+            .order('election_dt', { ascending: true })
+        })
 
       if (electionsError) {
         console.error('Error fetching elections:', electionsError)
@@ -40,7 +56,7 @@ export const electionService = {
       }
 
       const { data: candidates, error: candidatesError } = await supabase
-        .from('candidates')
+        .from('candidates' as any)
         .select('*')
         .order('poll_pct', { ascending: false })
 
@@ -50,7 +66,7 @@ export const electionService = {
       }
 
       // Group candidates by election
-      const candidatesByElection = candidates?.reduce((acc, candidate) => {
+      const candidatesByElection = (candidates as DatabaseCandidate[])?.reduce((acc, candidate) => {
         if (!acc[candidate.election_id]) {
           acc[candidate.election_id] = []
         }
@@ -59,13 +75,13 @@ export const electionService = {
       }, {} as Record<string, DatabaseCandidate[]>) || {}
 
       // Transform database data to app format
-      const transformedElections: Election[] = elections?.map(election => ({
+      const transformedElections: Election[] = (elections as DatabaseElection[])?.map(election => ({
         id: election.id,
         title: election.office_name,
         date: election.election_dt,
         type: election.is_special ? 'Special' : election.office_level,
         state: election.state,
-        description: `${election.office_level} election in ${election.state}`,
+        description: election.description || `${election.office_level} election in ${election.state}`,
         candidates: candidatesByElection[election.id]?.map(candidate => ({
           name: candidate.name,
           party: candidate.party,

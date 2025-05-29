@@ -9,6 +9,56 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      candidates: {
+        Row: {
+          created_at: string
+          election_id: string
+          id: string
+          image_url: string | null
+          incumbent: boolean
+          intent_pct: number | null
+          last_polled: string | null
+          name: string
+          party: string
+          poll_pct: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          election_id: string
+          id?: string
+          image_url?: string | null
+          incumbent?: boolean
+          intent_pct?: number | null
+          last_polled?: string | null
+          name: string
+          party: string
+          poll_pct?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          election_id?: string
+          id?: string
+          image_url?: string | null
+          incumbent?: boolean
+          intent_pct?: number | null
+          last_polled?: string | null
+          name?: string
+          party?: string
+          poll_pct?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string | null
@@ -148,6 +198,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      elections: {
+        Row: {
+          created_at: string
+          description: string | null
+          election_dt: string
+          id: string
+          is_special: boolean
+          office_level: string
+          office_name: string
+          party_filter: string[] | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          election_dt: string
+          id?: string
+          is_special?: boolean
+          office_level: string
+          office_name: string
+          party_filter?: string[] | null
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          election_dt?: string
+          id?: string
+          is_special?: boolean
+          office_level?: string
+          office_name?: string
+          party_filter?: string[] | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -316,6 +405,38 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      votes_intent: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          id: string
+          user_uid: string | null
+          weight: number | null
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          id?: string
+          user_uid?: string | null
+          weight?: number | null
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          user_uid?: string | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votes_intent_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
             referencedColumns: ["id"]
           },
         ]
