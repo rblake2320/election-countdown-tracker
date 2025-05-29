@@ -1,1 +1,11 @@
+
 project_id = "viwrhnkkojgkclwnsxdb"
+
+[functions.fetch-fec-data]
+verify_jwt = false
+
+[functions.fetch-google-civic-data]  
+verify_jwt = false
+
+[functions.sync-time]
+verify_jwt = false

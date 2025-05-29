@@ -3,11 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { ElectionCard } from './ElectionCard';
 import { FilterPanel } from './FilterPanel';
 import { Header } from './Header';
-import { electionsData } from '@/data/electionsData';
 import { Election, FilterOptions } from '@/types/election';
+import { electionService } from '@/services/electionService';
+import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 
 export const ElectionCountdownApp = () => {
-  const [filteredElections, setFilteredElections] = useState<Election[]>(electionsData);
+  const [elections, setElections] = useState<Election[]>([]);
+  const [filteredElections, setFilteredElections] = useState<Election[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     party: 'all',
     state: 'all',
@@ -15,8 +20,54 @@ export const ElectionCountdownApp = () => {
     timeUnit: 'all'
   });
 
+  // Load elections from database
+  const loadElections = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const electionData = await electionService.fetchElections();
+      setElections(electionData);
+      console.log(`Loaded ${electionData.length} elections from database`);
+    } catch (err) {
+      console.error('Error loading elections:', err);
+      setError('Failed to load elections. Please try refreshing the page.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sync data from external APIs
+  const syncExternalData = async () => {
+    try {
+      setSyncing(true);
+      setError(null);
+      
+      // Sync FEC data first
+      await electionService.syncFECData();
+      
+      // Then sync Google Civic data
+      await electionService.syncGoogleCivicData();
+      
+      // Reload elections after sync
+      await loadElections();
+      
+      console.log('External data sync completed');
+    } catch (err) {
+      console.error('Error syncing external data:', err);
+      setError('Failed to sync data from external sources. Using cached data.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
-    let filtered = electionsData;
+    loadElections();
+  }, []);
+
+  // Filter elections based on current filters
+  useEffect(() => {
+    let filtered = elections;
 
     if (filters.party !== 'all') {
       filtered = filtered.filter(election => 
@@ -39,7 +90,18 @@ export const ElectionCountdownApp = () => {
     }
 
     setFilteredElections(filtered);
-  }, [filters]);
+  }, [elections, filters]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
+          <p className="text-white text-lg">Loading elections...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
@@ -47,6 +109,45 @@ export const ElectionCountdownApp = () => {
       
       <div className="relative z-10">
         <Header />
+        
+        {/* Data sync controls */}
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={syncExternalData}
+                disabled={syncing}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? 'Syncing...' : 'Sync Election Data'}</span>
+              </button>
+              
+              <button
+                onClick={loadElections}
+                disabled={loading}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            </div>
+            
+            <div className="text-white/70 text-sm">
+              {elections.length} elections loaded
+            </div>
+          </div>
+          
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
+              <div className="flex items-center space-x-2 text-red-200">
+                <AlertCircle className="w-5 h-5" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         <FilterPanel filters={filters} onFiltersChange={setFilters} />
         
         <div className="container mx-auto px-4 py-8">
@@ -60,10 +161,13 @@ export const ElectionCountdownApp = () => {
             ))}
           </div>
           
-          {filteredElections.length === 0 && (
+          {filteredElections.length === 0 && !loading && (
             <div className="text-center py-16">
               <div className="text-white text-xl opacity-75">
-                No elections match your current filters
+                {elections.length === 0 
+                  ? 'No elections found. Try syncing data from external sources.'
+                  : 'No elections match your current filters'
+                }
               </div>
             </div>
           )}
