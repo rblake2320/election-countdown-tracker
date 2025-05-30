@@ -1,16 +1,21 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FilterPanel } from './FilterPanel';
 import { Header } from './Header';
 import { ElectionGrid } from './ElectionGrid';
 import { RealTimeControls } from './RealTimeControls';
 import { SyncControls } from './SyncControls';
 import { ErrorDisplay } from './ErrorDisplay';
+import { PrivacyConsentBanner } from './PrivacyConsentBanner';
+import { ElectionCycleSelector } from './ElectionCycleSelector';
 import { useRealTimeElections } from '@/hooks/useRealTimeElections';
 import { useElectionFiltering } from '@/hooks/useElectionFiltering';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { Loader2 } from 'lucide-react';
 
 export const ElectionCountdownApp = () => {
+  const [selectedCycle, setSelectedCycle] = useState<string>('');
+  
   const {
     elections,
     lastUpdated,
@@ -24,16 +29,31 @@ export const ElectionCountdownApp = () => {
 
   const { filteredElections, filters, setFilters } = useElectionFiltering(elections);
 
+  // Initialize analytics tracking
+  const { logEvent, logElectionInteraction } = useAnalytics();
+
   const handleSyncComplete = async () => {
+    logEvent('data_sync_initiated', { source: 'manual_sync' });
     await forceRefresh();
   };
 
   const handleToggleRealTime = () => {
     if (isRealTimeActive) {
+      logEvent('realtime_disabled');
       stopRealTime();
     } else {
+      logEvent('realtime_enabled');
       startRealTime();
     }
+  };
+
+  const handleCycleChange = (cycleId: string) => {
+    setSelectedCycle(cycleId);
+    logEvent('election_cycle_changed', { cycle_id: cycleId });
+  };
+
+  const handleElectionInteraction = (electionId: string, interactionType: string) => {
+    logElectionInteraction(electionId, interactionType);
   };
 
   if (isLoading && elections.length === 0) {
@@ -55,8 +75,12 @@ export const ElectionCountdownApp = () => {
         <Header />
         
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <ElectionCycleSelector
+                selectedCycle={selectedCycle}
+                onCycleChange={handleCycleChange}
+              />
               <SyncControls onSyncComplete={handleSyncComplete} />
               <RealTimeControls
                 isRealTimeActive={isRealTimeActive}
@@ -72,7 +96,13 @@ export const ElectionCountdownApp = () => {
           {error && <ErrorDisplay error={error} />}
         </div>
 
-        <FilterPanel filters={filters} onFiltersChange={setFilters} />
+        <FilterPanel 
+          filters={filters} 
+          onFiltersChange={(newFilters) => {
+            logEvent('filters_changed', { filters: newFilters });
+            setFilters(newFilters);
+          }} 
+        />
         
         <div className="container mx-auto px-4 py-8">
           <ElectionGrid 
@@ -82,6 +112,8 @@ export const ElectionCountdownApp = () => {
           />
         </div>
       </div>
+      
+      <PrivacyConsentBanner />
     </div>
   );
 };

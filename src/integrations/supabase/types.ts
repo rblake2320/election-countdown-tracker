@@ -199,10 +199,50 @@ export type Database = {
           },
         ]
       }
+      election_cycles: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          start_date: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          start_date: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          start_date?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       elections: {
         Row: {
           created_at: string
           description: string | null
+          election_cycle_id: string | null
           election_dt: string
           id: string
           is_special: boolean
@@ -215,6 +255,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          election_cycle_id?: string | null
           election_dt: string
           id?: string
           is_special?: boolean
@@ -227,6 +268,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          election_cycle_id?: string | null
           election_dt?: string
           id?: string
           is_special?: boolean
@@ -235,6 +277,127 @@ export type Database = {
           party_filter?: string[] | null
           state?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elections_election_cycle_id_fkey"
+            columns: ["election_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "election_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagement_metrics: {
+        Row: {
+          created_at: string
+          election_id: string | null
+          id: string
+          interactions_count: number | null
+          scroll_depth: number | null
+          session_id: string | null
+          shares_count: number | null
+          time_spent: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          interactions_count?: number | null
+          scroll_depth?: number | null
+          session_id?: string | null
+          shares_count?: number | null
+          time_spent?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          interactions_count?: number | null
+          scroll_depth?: number | null
+          session_id?: string | null
+          shares_count?: number | null
+          time_spent?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_metrics_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interaction_logs: {
+        Row: {
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          page_url: string | null
+          session_id: string | null
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          page_url?: string | null
+          session_id?: string | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          page_url?: string | null
+          session_id?: string | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      non_voter_tracking: {
+        Row: {
+          barriers: string[] | null
+          created_at: string
+          id: string
+          interest_level: number | null
+          last_voted_year: number | null
+          reason: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          barriers?: string[] | null
+          created_at?: string
+          id?: string
+          interest_level?: number | null
+          last_voted_year?: number | null
+          reason?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          barriers?: string[] | null
+          created_at?: string
+          id?: string
+          interest_level?: number | null
+          last_voted_year?: number | null
+          reason?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -387,6 +550,75 @@ export type Database = {
           session_id?: string | null
           time_spent?: number | null
           timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_demographics: {
+        Row: {
+          age_range: string | null
+          created_at: string
+          district: string | null
+          id: string
+          registration_status: string | null
+          state: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          age_range?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          registration_status?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          age_range?: string | null
+          created_at?: string
+          district?: string | null
+          id?: string
+          registration_status?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          analytics_consent: boolean | null
+          created_at: string
+          id: string
+          interests: string[] | null
+          notification_settings: Json | null
+          political_affiliation: string | null
+          privacy_consent: boolean | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          analytics_consent?: boolean | null
+          created_at?: string
+          id?: string
+          interests?: string[] | null
+          notification_settings?: Json | null
+          political_affiliation?: string | null
+          privacy_consent?: boolean | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          analytics_consent?: boolean | null
+          created_at?: string
+          id?: string
+          interests?: string[] | null
+          notification_settings?: Json | null
+          political_affiliation?: string | null
+          privacy_consent?: boolean | null
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: []

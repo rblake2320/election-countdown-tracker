@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client'
 import { Election, Candidate } from '@/types/election'
 
@@ -30,15 +29,21 @@ export interface DatabaseCandidate {
 }
 
 export const electionService = {
-  async fetchElections(): Promise<Election[]> {
+  async fetchElections(cycleId?: string): Promise<Election[]> {
     try {
       console.log('Fetching elections from database...')
       
-      // Fetch all elections, not just upcoming ones for now
-      const { data: electionsData, error: electionsError } = await supabase
+      let electionsQuery = supabase
         .from('elections')
         .select('*')
-        .order('election_dt', { ascending: true })
+        .order('election_dt', { ascending: true });
+
+      // Filter by election cycle if provided
+      if (cycleId) {
+        electionsQuery = electionsQuery.eq('election_cycle_id', cycleId);
+      }
+
+      const { data: electionsData, error: electionsError } = await electionsQuery;
 
       if (electionsError) {
         console.error('Error fetching elections:', electionsError)
