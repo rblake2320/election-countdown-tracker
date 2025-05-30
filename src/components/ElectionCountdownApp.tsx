@@ -7,6 +7,7 @@ import { RealTimeControls } from './RealTimeControls';
 import { SyncControls } from './SyncControls';
 import { ErrorDisplay } from './ErrorDisplay';
 import { PrivacyConsentBanner } from './PrivacyConsentBanner';
+import { DataConsentBanner } from './DataConsentBanner';
 import { ElectionCycleSelector } from './ElectionCycleSelector';
 import { useRealTimeElections } from '@/hooks/useRealTimeElections';
 import { useElectionFiltering } from '@/hooks/useElectionFiltering';
@@ -114,6 +115,7 @@ export const ElectionCountdownApp = () => {
       </div>
       
       <PrivacyConsentBanner />
+      <DataConsentBanner />
     </div>
   );
 };

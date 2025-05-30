@@ -7,7 +7,7 @@ export interface ElectionCycle {
   slug: string;
   start_date: string;
   end_date: string;
-  type: 'primary' | 'general' | 'special' | 'midterm' | 'presidential';
+  type: string;
   is_active: boolean;
   description?: string;
   created_at: string;

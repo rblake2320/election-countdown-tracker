@@ -1,15 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface InteractionLog {
   id?: string;
   user_id?: string;
   session_id?: string;
   event_type: string;
-  event_data?: Record<string, any>;
+  event_data?: Json;
   page_url?: string;
   timestamp?: string;
-  ip_address?: string;
+  ip_address?: unknown;
   user_agent?: string;
 }
 
@@ -30,7 +31,7 @@ export interface UserPreferences {
   user_id?: string;
   political_affiliation?: string;
   interests?: string[];
-  notification_settings?: Record<string, any>;
+  notification_settings?: Json;
   privacy_consent?: boolean;
   analytics_consent?: boolean;
   created_at?: string;
