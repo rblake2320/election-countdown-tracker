@@ -34,7 +34,7 @@ export const electionService = {
     try {
       console.log('Fetching elections from database...')
       
-      // Fetch elections using the proper table name
+      // Fetch all elections, not just upcoming ones for now
       const { data: electionsData, error: electionsError } = await supabase
         .from('elections')
         .select('*')
@@ -47,7 +47,7 @@ export const electionService = {
 
       console.log('Elections fetched:', electionsData?.length || 0)
 
-      // Fetch candidates using the proper table name
+      // Fetch all candidates
       const { data: candidatesData, error: candidatesError } = await supabase
         .from('candidates')
         .select('*')
@@ -60,7 +60,6 @@ export const electionService = {
 
       console.log('Candidates fetched:', candidatesData?.length || 0)
 
-      // Use the data directly without casting since it should match the database schema
       const elections = electionsData || []
       const candidates = candidatesData || []
 

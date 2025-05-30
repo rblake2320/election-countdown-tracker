@@ -262,6 +262,36 @@ export type Database = {
         }
         Relationships: []
       }
+      search_history: {
+        Row: {
+          id: string
+          results_count: number | null
+          search_query: string
+          search_type: string | null
+          session_id: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          results_count?: number | null
+          search_query: string
+          search_type?: string | null
+          session_id?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          results_count?: number | null
+          search_query?: string
+          search_type?: string | null
+          session_id?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       stored_credentials: {
         Row: {
           category_id: string | null
@@ -327,6 +357,36 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_analytics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          page_viewed: string
+          session_id: string | null
+          time_spent: number | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          page_viewed: string
+          session_id?: string | null
+          time_spent?: number | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          page_viewed?: string
+          session_id?: string | null
+          time_spent?: number | null
+          timestamp?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -437,6 +497,38 @@ export type Database = {
             columns: ["candidate_id"]
             isOneToOne: false
             referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watchlists: {
+        Row: {
+          created_at: string | null
+          election_id: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          election_id: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          election_id?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlists_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "elections"
             referencedColumns: ["id"]
           },
         ]
