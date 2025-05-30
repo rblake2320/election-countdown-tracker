@@ -6,9 +6,10 @@ import { CandidateCard } from './CandidateCard';
 
 interface CandidateStandingsProps {
   candidates: Candidate[];
+  electionId: string;
 }
 
-export const CandidateStandings: React.FC<CandidateStandingsProps> = ({ candidates }) => {
+export const CandidateStandings: React.FC<CandidateStandingsProps> = ({ candidates, electionId }) => {
   // Sort candidates by polling percentage (descending)
   const sortedCandidates = [...candidates].sort((a, b) => b.pollingPercentage - a.pollingPercentage);
 
@@ -18,6 +19,7 @@ export const CandidateStandings: React.FC<CandidateStandingsProps> = ({ candidat
         <CandidateCard 
           key={`${candidate.name}-${candidate.party}`}
           candidate={candidate}
+          electionId={electionId}
           isLeading={index === 0}
         />
       ))}

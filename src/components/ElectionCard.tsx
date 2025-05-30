@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Users, TrendingUp, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Election } from '@/types/election';
@@ -125,6 +124,7 @@ export const ElectionCard: React.FC<ElectionCardProps> = ({ election, timeUnit }
                 <CandidateCard 
                   key={`${candidate.name}-${candidate.party}`}
                   candidate={candidate}
+                  electionId={election.id}
                   isLeading={index === 0}
                 />
               ))}
@@ -135,6 +135,7 @@ export const ElectionCard: React.FC<ElectionCardProps> = ({ election, timeUnit }
                     <CandidateCard 
                       key={`${candidate.name}-${candidate.party}`}
                       candidate={candidate}
+                      electionId={election.id}
                     />
                   ))}
                   

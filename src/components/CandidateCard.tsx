@@ -1,13 +1,19 @@
 
 import React from 'react';
 import { Candidate } from '@/types/election';
+import { IntentButton } from './IntentButton';
 
 interface CandidateCardProps {
   candidate: Candidate;
+  electionId: string;
   isLeading?: boolean;
 }
 
-export const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, isLeading = false }) => {
+export const CandidateCard: React.FC<CandidateCardProps> = ({ 
+  candidate, 
+  electionId, 
+  isLeading = false 
+}) => {
   const getPartyColor = (party: string) => {
     switch (party.toLowerCase()) {
       case 'democratic': return 'bg-blue-500';
@@ -42,11 +48,15 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, isLeadi
         </div>
       </div>
       
-      <div className="text-right">
-        <div className="text-white font-bold text-lg">{candidate.pollingPercentage}%</div>
-        {isLeading && (
-          <div className="text-green-400 text-xs font-medium">Leading</div>
-        )}
+      <div className="flex items-center space-x-3">
+        <div className="text-right">
+          <div className="text-white font-bold text-lg">{candidate.pollingPercentage}%</div>
+          {isLeading && (
+            <div className="text-green-400 text-xs font-medium">Leading</div>
+          )}
+        </div>
+        
+        <IntentButton candidate={candidate} electionId={electionId} />
       </div>
     </div>
   );
