@@ -6,8 +6,9 @@ export const campaignService = {
   // Campaign account management
   async getCampaignAccount(campaignId: string): Promise<CampaignAccount | null> {
     try {
+      // Use raw query since campaign_accounts table is not in generated types yet
       const { data, error } = await supabase
-        .from('campaign_accounts')
+        .from('campaign_accounts' as any)
         .select('*')
         .eq('id', campaignId)
         .single();
@@ -17,7 +18,7 @@ export const campaignService = {
         return null;
       }
 
-      return data;
+      return data as CampaignAccount;
     } catch (error) {
       console.error('Error in getCampaignAccount:', error);
       return null;
@@ -27,7 +28,7 @@ export const campaignService = {
   async createCampaignAccount(account: Omit<CampaignAccount, 'id' | 'created_at' | 'updated_at'>): Promise<CampaignAccount | null> {
     try {
       const { data, error } = await supabase
-        .from('campaign_accounts')
+        .from('campaign_accounts' as any)
         .insert(account)
         .select()
         .single();
@@ -37,7 +38,7 @@ export const campaignService = {
         return null;
       }
 
-      return data;
+      return data as CampaignAccount;
     } catch (error) {
       console.error('Error in createCampaignAccount:', error);
       return null;
@@ -90,7 +91,7 @@ export const campaignService = {
   // Data access logging
   async logDataAccess(campaignId: string, dataType: string, cost: number): Promise<void> {
     try {
-      const accessLog: Omit<CampaignAccessLog, 'id'> = {
+      const accessLog = {
         campaign_id: campaignId,
         data_accessed: dataType,
         timestamp: new Date().toISOString(),
@@ -98,7 +99,7 @@ export const campaignService = {
       };
 
       const { error } = await supabase
-        .from('campaign_access_logs')
+        .from('campaign_access_logs' as any)
         .insert(accessLog);
 
       if (error) {
@@ -113,7 +114,7 @@ export const campaignService = {
   async recordDataPurchase(purchase: Omit<DataPurchase, 'id'>): Promise<void> {
     try {
       const { error } = await supabase
-        .from('data_purchases')
+        .from('data_purchases' as any)
         .insert(purchase);
 
       if (error) {
@@ -125,7 +126,7 @@ export const campaignService = {
   },
 
   // Helper methods
-  private getAnalyticsCost(tier: string): number {
+  getAnalyticsCost(tier: string): number {
     const costs = {
       basic: 0,
       pro: 5,
@@ -135,7 +136,7 @@ export const campaignService = {
     return costs[tier as keyof typeof costs] || 0;
   },
 
-  private async getAnonymizedDemographics(electionId: string): Promise<Record<string, number>> {
+  async getAnonymizedDemographics(electionId: string): Promise<Record<string, number>> {
     try {
       // Get user IDs who engaged with this election
       const { data: engagementData } = await supabase
@@ -169,7 +170,7 @@ export const campaignService = {
     }
   },
 
-  private calculateEngagementScore(metrics: any[]): number {
+  calculateEngagementScore(metrics: any[]): number {
     if (!metrics.length) return 0;
     
     const avgTimeSpent = metrics.reduce((acc, m) => acc + (m.time_spent || 0), 0) / metrics.length;

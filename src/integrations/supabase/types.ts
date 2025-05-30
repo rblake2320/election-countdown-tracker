@@ -9,6 +9,68 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      campaign_access_logs: {
+        Row: {
+          campaign_id: string
+          cost: number
+          data_accessed: string
+          id: string
+          timestamp: string
+        }
+        Insert: {
+          campaign_id: string
+          cost?: number
+          data_accessed: string
+          id?: string
+          timestamp?: string
+        }
+        Update: {
+          campaign_id?: string
+          cost?: number
+          data_accessed?: string
+          id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_access_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_accounts: {
+        Row: {
+          candidate_name: string
+          created_at: string
+          id: string
+          office_seeking: string
+          subscription_tier: string
+          updated_at: string
+          verified_status: boolean
+        }
+        Insert: {
+          candidate_name: string
+          created_at?: string
+          id?: string
+          office_seeking: string
+          subscription_tier?: string
+          updated_at?: string
+          verified_status?: boolean
+        }
+        Update: {
+          candidate_name?: string
+          created_at?: string
+          id?: string
+          office_seeking?: string
+          subscription_tier?: string
+          updated_at?: string
+          verified_status?: boolean
+        }
+        Relationships: []
+      }
       candidates: {
         Row: {
           created_at: string
@@ -199,6 +261,38 @@ export type Database = {
           },
         ]
       }
+      data_purchases: {
+        Row: {
+          campaign_id: string
+          dataset_type: string
+          download_date: string
+          id: string
+          price: number
+        }
+        Insert: {
+          campaign_id: string
+          dataset_type: string
+          download_date?: string
+          id?: string
+          price: number
+        }
+        Update: {
+          campaign_id?: string
+          dataset_type?: string
+          download_date?: string
+          id?: string
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_purchases_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       election_cycles: {
         Row: {
           created_at: string
@@ -288,6 +382,51 @@ export type Database = {
           },
         ]
       }
+      elections_archive: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          election_dt: string
+          id: string
+          is_special: boolean
+          office_level: string
+          office_name: string
+          state: string
+          total_candidates: number | null
+          total_engagement: number | null
+          total_views: number | null
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at: string
+          election_dt: string
+          id: string
+          is_special?: boolean
+          office_level: string
+          office_name: string
+          state: string
+          total_candidates?: number | null
+          total_engagement?: number | null
+          total_views?: number | null
+          updated_at: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          election_dt?: string
+          id?: string
+          is_special?: boolean
+          office_level?: string
+          office_name?: string
+          state?: string
+          total_candidates?: number | null
+          total_engagement?: number | null
+          total_views?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       engagement_metrics: {
         Row: {
           created_at: string
@@ -332,7 +471,79 @@ export type Database = {
           },
         ]
       }
+      engagement_metrics_archive: {
+        Row: {
+          created_at: string
+          election_id: string | null
+          id: string
+          interactions_count: number | null
+          scroll_depth: number | null
+          session_id: string | null
+          shares_count: number | null
+          time_spent: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          interactions_count?: number | null
+          scroll_depth?: number | null
+          session_id?: string | null
+          shares_count?: number | null
+          time_spent?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          election_id?: string | null
+          id?: string
+          interactions_count?: number | null
+          scroll_depth?: number | null
+          session_id?: string | null
+          shares_count?: number | null
+          time_spent?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       interaction_logs: {
+        Row: {
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          page_url: string | null
+          session_id: string | null
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          page_url?: string | null
+          session_id?: string | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          page_url?: string | null
+          session_id?: string | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      interaction_logs_archive: {
         Row: {
           event_data: Json | null
           event_type: string
@@ -525,6 +736,36 @@ export type Database = {
         Relationships: []
       }
       user_analytics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          page_viewed: string
+          session_id: string | null
+          time_spent: number | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          page_viewed: string
+          session_id?: string | null
+          time_spent?: number | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          page_viewed?: string
+          session_id?: string | null
+          time_spent?: number | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_analytics_archive: {
         Row: {
           id: string
           metadata: Json | null
@@ -770,7 +1011,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      archive_old_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_election_countdown_cache: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          election_id: string
+          office_name: string
+          state: string
+          election_dt: string
+          time_remaining: unknown
+          candidate_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
