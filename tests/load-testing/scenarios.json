@@ -1,0 +1,51 @@
+
+{
+  "scenarios": {
+    "election_night": {
+      "description": "Election night peak traffic simulation",
+      "target_users": 10000,
+      "duration": "65m",
+      "ramp_up": "20m",
+      "sustain": "20m",
+      "ramp_down": "15m"
+    },
+    "campaign_dashboard": {
+      "description": "Campaign managers using analytics dashboard",
+      "target_users": 1000,
+      "duration": "45m",
+      "user_behavior": "dashboard_heavy"
+    },
+    "api_stress": {
+      "description": "1M API requests per hour sustained load",
+      "requests_per_second": 278,
+      "duration": "60m",
+      "endpoints": [
+        "/rest/v1/elections",
+        "/rest/v1/candidates", 
+        "/rest/v1/engagement_metrics",
+        "/functions/v1/fetch-fec-data",
+        "/functions/v1/sync-time"
+      ]
+    },
+    "mixed_load": {
+      "description": "Combined election night + campaign dashboard traffic",
+      "election_users": 8000,
+      "campaign_users": 800,
+      "api_background": 200,
+      "duration": "90m"
+    }
+  },
+  "performance_targets": {
+    "response_time_p95": "2000ms",
+    "response_time_p90": "1500ms", 
+    "error_rate_max": "5%",
+    "throughput_min": "500 rps",
+    "cpu_usage_max": "80%",
+    "memory_usage_max": "85%"
+  },
+  "infrastructure_limits": {
+    "supabase_connections": 200,
+    "edge_function_concurrency": 1000,
+    "database_connections": 100
+  }
+}

@@ -1,0 +1,70 @@
+
+{
+  "monitoring": {
+    "real_time_metrics": {
+      "enabled": true,
+      "refresh_interval": "5s",
+      "metrics": [
+        "http_req_duration",
+        "http_req_failed", 
+        "http_reqs",
+        "vus",
+        "iterations"
+      ]
+    },
+    "alerts": {
+      "response_time_threshold": {
+        "metric": "http_req_duration",
+        "condition": "p95 > 3000",
+        "action": "notify"
+      },
+      "error_rate_threshold": {
+        "metric": "http_req_failed",
+        "condition": "rate > 0.1",
+        "action": "stop_test"
+      },
+      "memory_threshold": {
+        "metric": "system_memory",
+        "condition": "usage > 90%",
+        "action": "notify"
+      }
+    },
+    "custom_metrics": [
+      {
+        "name": "cache_hit_rate",
+        "description": "Percentage of requests served from cache",
+        "target": "> 80%"
+      },
+      {
+        "name": "database_connections",
+        "description": "Active database connections",
+        "target": "< 150"
+      },
+      {
+        "name": "archive_success_rate", 
+        "description": "Data archival success rate",
+        "target": "> 99%"
+      }
+    ]
+  },
+  "dashboard_urls": {
+    "supabase_dashboard": "https://supabase.com/dashboard/project/viwrhnkkojgkclwnsxdb",
+    "k6_cloud": "https://app.k6.io/",
+    "grafana": "http://localhost:3000"
+  },
+  "log_analysis": {
+    "error_patterns": [
+      "row-level security policy",
+      "connection pool exhausted",
+      "timeout",
+      "out of memory",
+      "rate limit exceeded"
+    ],
+    "performance_indicators": [
+      "query execution time",
+      "cache miss",
+      "slow log",
+      "connection created"
+    ]
+  }
+}
