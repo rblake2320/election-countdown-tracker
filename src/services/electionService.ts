@@ -34,9 +34,9 @@ export const electionService = {
     try {
       console.log('Fetching elections from database...')
       
-      // Fetch elections with proper typing
+      // Fetch elections using the proper table name
       const { data: electionsData, error: electionsError } = await supabase
-        .from('elections' as any)
+        .from('elections')
         .select('*')
         .order('election_dt', { ascending: true })
 
@@ -47,9 +47,9 @@ export const electionService = {
 
       console.log('Elections fetched:', electionsData?.length || 0)
 
-      // Fetch candidates with proper typing
+      // Fetch candidates using the proper table name
       const { data: candidatesData, error: candidatesError } = await supabase
-        .from('candidates' as any)
+        .from('candidates')
         .select('*')
         .order('poll_pct', { ascending: false })
 
@@ -60,9 +60,9 @@ export const electionService = {
 
       console.log('Candidates fetched:', candidatesData?.length || 0)
 
-      // Cast the data to our expected types
-      const elections = (electionsData || []) as DatabaseElection[]
-      const candidates = (candidatesData || []) as DatabaseCandidate[]
+      // Use the data directly without casting since it should match the database schema
+      const elections = electionsData || []
+      const candidates = candidatesData || []
 
       // Group candidates by election
       const candidatesByElection = candidates.reduce((acc, candidate) => {
@@ -71,7 +71,7 @@ export const electionService = {
         }
         acc[candidate.election_id].push(candidate)
         return acc
-      }, {} as Record<string, DatabaseCandidate[]>)
+      }, {} as Record<string, typeof candidates[0][]>)
 
       // Transform database data to app format
       const transformedElections: Election[] = elections.map(election => ({
