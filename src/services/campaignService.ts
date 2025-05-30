@@ -18,7 +18,7 @@ export const campaignService = {
         return null;
       }
 
-      return data as CampaignAccount;
+      return data as unknown as CampaignAccount;
     } catch (error) {
       console.error('Error in getCampaignAccount:', error);
       return null;
@@ -38,7 +38,7 @@ export const campaignService = {
         return null;
       }
 
-      return data as CampaignAccount;
+      return data as unknown as CampaignAccount;
     } catch (error) {
       console.error('Error in createCampaignAccount:', error);
       return null;
