@@ -41,7 +41,7 @@ serve(async (req) => {
     // Run all tests
     await testDatabase(supabase);
     await testAuthentication(supabase);
-    await testElectionData(supabase);
+    await testElectionDataComprehensive(supabase);
     await testAPIs(supabase);
     await testSecurity(supabase);
     await testPerformance(supabase);
@@ -148,21 +148,76 @@ async function testAuthentication(supabase: any) {
   }
 }
 
-async function testElectionData(supabase: any) {
-  console.log("🗳️ Testing Election Data...");
+async function testElectionDataComprehensive(supabase: any) {
+  console.log("🗳️ Testing Election Data Comprehensively...");
 
   try {
-    // Test elections query
-    const { data: elections, error: electionsError } = await supabase
+    // Get total election count
+    const { count: totalElections, error: countError } = await supabase
       .from('elections')
-      .select('*')
-      .limit(10);
+      .select('*', { count: 'exact', head: true });
     
-    if (electionsError) throw new Error(`Elections query failed: ${electionsError.message}`);
+    if (countError) throw new Error(`Elections count query failed: ${countError.message}`);
     
-    const electionCount = elections ? elections.length : 0;
-    if (electionCount === 0) {
-      testResults.warnings.push('No elections found in database');
+    console.log(`Total elections in database: ${totalElections}`);
+
+    // CRITICAL: Check if we have minimum expected elections
+    const MINIMUM_EXPECTED_ELECTIONS = 150; // Should be at least 150+ for comprehensive coverage
+    if (totalElections < MINIMUM_EXPECTED_ELECTIONS) {
+      testResults.failed.push(`CRITICAL: Only ${totalElections} elections found, expected at least ${MINIMUM_EXPECTED_ELECTIONS}. Data ingestion severely incomplete.`);
+    } else {
+      testResults.passed.push(`Election Count: ${totalElections} elections loaded (meets minimum threshold)`);
+    }
+
+    // Test election distribution by level
+    const { data: electionsByLevel, error: levelError } = await supabase
+      .from('elections')
+      .select('office_level')
+      .not('office_level', 'is', null);
+    
+    if (levelError) throw new Error(`Elections by level query failed: ${levelError.message}`);
+
+    const levelCounts = electionsByLevel.reduce((acc, election) => {
+      acc[election.office_level] = (acc[election.office_level] || 0) + 1;
+      return acc;
+    }, {});
+
+    console.log('Elections by level:', levelCounts);
+
+    // Check for federal elections
+    if (!levelCounts['Federal'] || levelCounts['Federal'] < 20) {
+      testResults.failed.push(`MISSING: Federal elections (found ${levelCounts['Federal'] || 0}, expected 20+). House, Senate, Presidential races missing.`);
+    } else {
+      testResults.passed.push(`Federal Elections: ${levelCounts['Federal']} found`);
+    }
+
+    // Check for state elections
+    if (!levelCounts['State'] || levelCounts['State'] < 50) {
+      testResults.failed.push(`MISSING: State elections (found ${levelCounts['State'] || 0}, expected 50+). Governor, state legislature races missing.`);
+    } else {
+      testResults.passed.push(`State Elections: ${levelCounts['State']} found`);
+    }
+
+    // Check for local elections
+    if (!levelCounts['Local'] || levelCounts['Local'] < 80) {
+      testResults.warnings.push(`LIMITED: Local elections (found ${levelCounts['Local'] || 0}, expected 80+). Mayor, city council, school board races may be missing.`);
+    } else {
+      testResults.passed.push(`Local Elections: ${levelCounts['Local']} found`);
+    }
+
+    // Test upcoming vs past elections
+    const { data: upcomingElections, error: upcomingError } = await supabase
+      .from('elections')
+      .select('id, election_dt')
+      .gte('election_dt', new Date().toISOString());
+
+    if (upcomingError) throw new Error(`Upcoming elections query failed: ${upcomingError.message}`);
+
+    const upcomingCount = upcomingElections?.length || 0;
+    if (upcomingCount < 50) {
+      testResults.failed.push(`CRITICAL: Only ${upcomingCount} upcoming elections found. Need 50+ for meaningful countdown experience.`);
+    } else {
+      testResults.passed.push(`Upcoming Elections: ${upcomingCount} elections scheduled`);
     }
 
     // Test election cycles
@@ -172,19 +227,49 @@ async function testElectionData(supabase: any) {
     
     if (cyclesError) throw new Error(`Election cycles query failed: ${cyclesError.message}`);
 
-    // Test candidates if elections exist
-    if (elections && elections.length > 0) {
-      const { data: candidates, error: candidatesError } = await supabase
-        .from('candidates')
-        .select('*')
-        .eq('election_id', elections[0].id);
-      
-      if (candidatesError) throw new Error(`Candidates query failed: ${candidatesError.message}`);
+    if (!cycles || cycles.length < 3) {
+      testResults.failed.push(`MISSING: Election cycles (found ${cycles?.length || 0}, expected 3+). 2024, 2025, 2026 cycles missing.`);
+    } else {
+      testResults.passed.push(`Election Cycles: ${cycles.length} cycles configured`);
     }
 
-    testResults.passed.push(`Elections: ${electionCount} elections loaded, data structure valid`);
+    // Test candidates data
+    const { count: totalCandidates, error: candidatesCountError } = await supabase
+      .from('candidates')
+      .select('*', { count: 'exact', head: true });
+    
+    if (candidatesCountError) throw new Error(`Candidates count query failed: ${candidatesCountError.message}`);
+
+    if (totalCandidates < 300) {
+      testResults.failed.push(`CRITICAL: Only ${totalCandidates} candidates found. Need 300+ for comprehensive election coverage.`);
+    } else {
+      testResults.passed.push(`Candidates: ${totalCandidates} candidates loaded`);
+    }
+
+    // Test for specific critical elections that should exist
+    const criticalElections = [
+      { state: 'New Jersey', office_level: 'State', type: 'Governor' },
+      { state: 'Virginia', office_level: 'State', type: 'Governor' },
+      { state: 'Texas', office_level: 'Federal', type: 'House' },
+      { state: 'California', office_level: 'State', type: 'Governor' }
+    ];
+
+    for (const election of criticalElections) {
+      const { data: foundElection, error: searchError } = await supabase
+        .from('elections')
+        .select('*')
+        .eq('state', election.state)
+        .eq('office_level', election.office_level)
+        .ilike('office_name', `%${election.type}%`)
+        .limit(1);
+
+      if (searchError || !foundElection || foundElection.length === 0) {
+        testResults.failed.push(`MISSING: ${election.state} ${election.type} election not found. Key races missing from database.`);
+      }
+    }
+
   } catch (error) {
-    testResults.failed.push(`Elections: ${error.message}`);
+    testResults.failed.push(`Election Data: ${error.message}`);
   }
 }
 
@@ -199,19 +284,23 @@ async function testAPIs(supabase: any) {
     
     testResults.passed.push('Time Sync API: Connected and working');
 
-    // Test other edge functions
-    const functions = ['fetch-fec-data', 'fetch-google-civic-data', 'fetch-congress-data'];
+    // Test data ingestion functions
+    const dataFunctions = [
+      { name: 'fetch-fec-data', description: 'FEC API integration' },
+      { name: 'fetch-google-civic-data', description: 'Google Civic API integration' },
+      { name: 'fetch-congress-data', description: 'Congress data integration' }
+    ];
     
-    for (const funcName of functions) {
+    for (const func of dataFunctions) {
       try {
-        const { data, error } = await supabase.functions.invoke(funcName);
-        if (!error) {
-          testResults.passed.push(`${funcName}: Available and responsive`);
+        const { data, error } = await supabase.functions.invoke(func.name);
+        if (!error && data) {
+          testResults.passed.push(`${func.description}: Available and responsive`);
         } else {
-          testResults.warnings.push(`${funcName}: ${error.message}`);
+          testResults.failed.push(`${func.description}: Not working properly - ${error?.message || 'No data returned'}`);
         }
       } catch (e) {
-        testResults.warnings.push(`${funcName}: Function not available or configuration issue`);
+        testResults.failed.push(`${func.description}: Function not available or configuration issue - ${e.message}`);
       }
     }
 
@@ -338,7 +427,7 @@ function generateReport() {
 
   if (testResults.failed.length > 0) {
     report.status = 'CRITICAL';
-    report.message = '🚨 CRITICAL: Fix failed tests before launch!';
+    report.message = '🚨 CRITICAL: Platform NOT ready for launch! Fix critical issues immediately.';
   } else if (testResults.warnings.length > 0) {
     report.status = 'READY';
     report.message = '⚡ READY: Can launch, but address warnings soon';
