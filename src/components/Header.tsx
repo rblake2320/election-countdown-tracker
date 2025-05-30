@@ -1,41 +1,37 @@
 
 import React from 'react';
-import { Vote, Calendar, Users } from 'lucide-react';
+import { Vote, Settings, TestTube } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const Header = () => {
   return (
-    <header className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-white/10 to-blue-600/20"></div>
-      
-      <div className="relative container mx-auto px-4 py-12 text-center">
-        <div className="flex justify-center items-center mb-6">
-          <Vote className="w-16 h-16 text-white mr-4 animate-pulse" />
-          <h1 className="text-5xl md:text-7xl font-bold text-white">
-            Election
-            <span className="bg-gradient-to-r from-red-400 to-blue-400 bg-clip-text text-transparent">
-              Countdown
-            </span>
-          </h1>
-        </div>
-        
-        <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto">
-          Track every upcoming U.S. election in real-time. From federal races to local contests, 
-          stay informed about candidates, standings, and exact time remaining until Election Day.
-        </p>
-        
-        <div className="flex justify-center space-x-8 text-white/70">
-          <div className="flex items-center">
-            <Calendar className="w-5 h-5 mr-2" />
-            <span>Real-time Countdowns</span>
-          </div>
-          <div className="flex items-center">
-            <Users className="w-5 h-5 mr-2" />
-            <span>Candidate Tracking</span>
-          </div>
-          <div className="flex items-center">
-            <Vote className="w-5 h-5 mr-2" />
-            <span>Live Standings</span>
-          </div>
+    <header className="relative z-20 bg-black/20 backdrop-blur-sm border-b border-white/10">
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="flex items-center space-x-3">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg">
+              <Vote className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Election Countdown</h1>
+              <p className="text-white/70 text-sm">Real-time election tracking</p>
+            </div>
+          </Link>
+          
+          <nav className="flex items-center space-x-6">
+            <Link 
+              to="/test-suite"
+              className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors"
+            >
+              <TestTube className="w-5 h-5" />
+              <span>Test Suite</span>
+            </Link>
+            
+            <button className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors">
+              <Settings className="w-5 h-5" />
+              <span>Settings</span>
+            </button>
+          </nav>
         </div>
       </div>
     </header>
