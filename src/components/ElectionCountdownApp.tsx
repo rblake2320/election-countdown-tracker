@@ -1,12 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { ElectionCard } from './ElectionCard';
+import React from 'react';
 import { FilterPanel } from './FilterPanel';
 import { Header } from './Header';
-import { Election, FilterOptions } from '@/types/election';
-import { electionService } from '@/services/electionService';
+import { ElectionGrid } from './ElectionGrid';
+import { RealTimeControls } from './RealTimeControls';
+import { SyncControls } from './SyncControls';
+import { ErrorDisplay } from './ErrorDisplay';
 import { useRealTimeElections } from '@/hooks/useRealTimeElections';
-import { Loader2, RefreshCw, AlertCircle, Zap, Clock } from 'lucide-react';
+import { useElectionFiltering } from '@/hooks/useElectionFiltering';
+import { Loader2 } from 'lucide-react';
 
 export const ElectionCountdownApp = () => {
   const {
@@ -20,78 +22,18 @@ export const ElectionCountdownApp = () => {
     stopRealTime
   } = useRealTimeElections();
 
-  const [filteredElections, setFilteredElections] = useState<Election[]>([]);
-  const [syncing, setSyncing] = useState(false);
-  const [filters, setFilters] = useState<FilterOptions>({
-    party: 'all',
-    state: 'all',
-    electionType: 'all',
-    timeUnit: 'all'
-  });
+  const { filteredElections, filters, setFilters } = useElectionFiltering(elections);
 
-  // Sync data from external APIs
-  const syncExternalData = async () => {
-    try {
-      setSyncing(true);
-      
-      // Sync FEC and Congress data first
-      await electionService.syncFECData();
-      
-      // Sync detailed Congress data
-      await electionService.syncCongressData();
-      
-      // Then sync Google Civic data
-      await electionService.syncGoogleCivicData();
-      
-      // Force refresh after sync
-      await forceRefresh();
-      
-      console.log('All external data sync completed');
-    } catch (err) {
-      console.error('Error syncing external data:', err);
-    } finally {
-      setSyncing(false);
-    }
+  const handleSyncComplete = async () => {
+    await forceRefresh();
   };
 
-  // Filter elections based on current filters
-  useEffect(() => {
-    let filtered = elections;
-
-    if (filters.party !== 'all') {
-      filtered = filtered.filter(election => 
-        election.candidates?.some(candidate => 
-          candidate.party.toLowerCase() === filters.party
-        )
-      );
+  const handleToggleRealTime = () => {
+    if (isRealTimeActive) {
+      stopRealTime();
+    } else {
+      startRealTime();
     }
-
-    if (filters.state !== 'all') {
-      filtered = filtered.filter(election => 
-        election.state.toLowerCase() === filters.state
-      );
-    }
-
-    if (filters.electionType !== 'all') {
-      filtered = filtered.filter(election => 
-        election.type.toLowerCase().includes(filters.electionType)
-      );
-    }
-
-    setFilteredElections(filtered);
-  }, [elections, filters]);
-
-  const formatLastUpdated = (timestamp: string) => {
-    if (!timestamp) return '';
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    
-    if (diffSeconds < 60) return `${diffSeconds}s ago`;
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    return date.toLocaleTimeString();
   };
 
   if (isLoading && elections.length === 0) {
@@ -112,98 +54,32 @@ export const ElectionCountdownApp = () => {
       <div className="relative z-10">
         <Header />
         
-        {/* Real-time controls and status */}
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
-              <button
-                onClick={syncExternalData}
-                disabled={syncing}
-                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                <span>{syncing ? 'Syncing External APIs...' : 'Sync External Data'}</span>
-              </button>
-              
-              <button
-                onClick={forceRefresh}
-                disabled={isLoading}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span>Force Refresh</span>
-              </button>
-
-              <button
-                onClick={isRealTimeActive ? stopRealTime : startRealTime}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                  isRealTimeActive 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                }`}
-              >
-                <Zap className={`w-4 h-4 ${isRealTimeActive ? 'animate-pulse' : ''}`} />
-                <span>{isRealTimeActive ? 'Real-time ON' : 'Real-time OFF'}</span>
-              </button>
-            </div>
-            
-            <div className="flex items-center space-x-4 text-white/70 text-sm">
-              <div className="flex items-center space-x-2">
-                <span>{elections.length} elections loaded</span>
-                {isRealTimeActive && (
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                )}
-              </div>
-              {lastUpdated && (
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-4 h-4" />
-                  <span>Updated {formatLastUpdated(lastUpdated)}</span>
-                </div>
-              )}
+              <SyncControls onSyncComplete={handleSyncComplete} />
+              <RealTimeControls
+                isRealTimeActive={isRealTimeActive}
+                isLoading={isLoading}
+                lastUpdated={lastUpdated}
+                electionsCount={elections.length}
+                onForceRefresh={forceRefresh}
+                onToggleRealTime={handleToggleRealTime}
+              />
             </div>
           </div>
           
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
-              <div className="flex items-center space-x-2 text-red-200">
-                <AlertCircle className="w-5 h-5" />
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
+          {error && <ErrorDisplay error={error} />}
         </div>
 
         <FilterPanel filters={filters} onFiltersChange={setFilters} />
         
         <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredElections.map((election) => (
-              <ElectionCard 
-                key={election.id} 
-                election={election}
-                timeUnit={filters.timeUnit}
-              />
-            ))}
-          </div>
-          
-          {filteredElections.length === 0 && !isLoading && (
-            <div className="text-center py-16">
-              <div className="text-white text-xl opacity-75">
-                {elections.length === 0 
-                  ? 'No upcoming elections found. Try syncing external data sources.'
-                  : 'No elections match your current filters'
-                }
-              </div>
-              {elections.length === 0 && (
-                <button
-                  onClick={syncExternalData}
-                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
-                >
-                  Sync Election Data
-                </button>
-              )}
-            </div>
-          )}
+          <ElectionGrid 
+            elections={filteredElections}
+            timeUnit={filters.timeUnit}
+            onSyncData={handleSyncComplete}
+          />
         </div>
       </div>
     </div>
