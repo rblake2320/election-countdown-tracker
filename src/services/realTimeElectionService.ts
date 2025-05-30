@@ -65,13 +65,13 @@ class RealTimeElectionService {
     try {
       console.log('Fetching real-time election updates...');
       
-      // Fetch elections with a more comprehensive query
+      // Fetch all elections from the expanded database
       const { data: electionsData, error: electionsError } = await supabase
         .from('elections')
         .select('*')
         .gte('election_dt', new Date().toISOString()) // Only future elections
         .order('election_dt', { ascending: true })
-        .limit(50); // Increased limit
+        .limit(200); // Increased limit to handle all elections
 
       if (electionsError) {
         console.error('Error fetching elections:', electionsError);

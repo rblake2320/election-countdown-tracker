@@ -17,7 +17,8 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChan
     'nebraska', 'nevada', 'new hampshire', 'new jersey', 'new mexico', 'new york',
     'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon', 'pennsylvania',
     'rhode island', 'south carolina', 'south dakota', 'tennessee', 'texas', 'utah',
-    'vermont', 'virginia', 'washington', 'west virginia', 'wisconsin', 'wyoming'
+    'vermont', 'virginia', 'washington', 'west virginia', 'wisconsin', 'wyoming',
+    'washington dc', 'puerto rico', 'us virgin islands', 'guam', 'american samoa', 'northern mariana islands'
   ];
 
   const electionTypes = ['all', 'primary', 'general', 'special', 'runoff', 'local'];
@@ -54,7 +55,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChan
           <div className="flex flex-col">
             <label className="text-white/80 text-sm mb-2 flex items-center">
               <MapPin className="w-4 h-4 mr-1" />
-              State
+              State/Territory
             </label>
             <select
               value={filters.state}
