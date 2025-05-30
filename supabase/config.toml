@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.sync-time]
 verify_jwt = false
+
+[functions.fetch-congress-data]
+verify_jwt = false

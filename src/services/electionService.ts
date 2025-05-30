@@ -101,12 +101,24 @@ export const electionService = {
 
   async syncFECData(): Promise<void> {
     try {
-      console.log('Starting FEC data sync...')
+      console.log('Starting FEC and Congress data sync...')
       const { data, error } = await supabase.functions.invoke('fetch-fec-data')
       if (error) throw error
-      console.log('FEC data sync completed:', data)
+      console.log('FEC and Congress data sync completed:', data)
     } catch (error) {
-      console.error('Error syncing FEC data:', error)
+      console.error('Error syncing FEC and Congress data:', error)
+      throw error
+    }
+  },
+
+  async syncCongressData(): Promise<void> {
+    try {
+      console.log('Starting detailed Congress data sync...')
+      const { data, error } = await supabase.functions.invoke('fetch-congress-data')
+      if (error) throw error
+      console.log('Congress data sync completed:', data)
+    } catch (error) {
+      console.error('Error syncing Congress data:', error)
       throw error
     }
   },

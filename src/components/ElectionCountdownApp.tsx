@@ -42,8 +42,11 @@ export const ElectionCountdownApp = () => {
       setSyncing(true);
       setError(null);
       
-      // Sync FEC data first
+      // Sync FEC and Congress data first
       await electionService.syncFECData();
+      
+      // Sync detailed Congress data
+      await electionService.syncCongressData();
       
       // Then sync Google Civic data
       await electionService.syncGoogleCivicData();
@@ -51,7 +54,7 @@ export const ElectionCountdownApp = () => {
       // Reload elections after sync
       await loadElections();
       
-      console.log('External data sync completed');
+      console.log('All external data sync completed');
     } catch (err) {
       console.error('Error syncing external data:', err);
       setError('Failed to sync data from external sources. Using cached data.');
@@ -120,7 +123,7 @@ export const ElectionCountdownApp = () => {
                 className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                <span>{syncing ? 'Syncing...' : 'Sync Election Data'}</span>
+                <span>{syncing ? 'Syncing...' : 'Sync All Election Data'}</span>
               </button>
               
               <button
