@@ -7,132 +7,100 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const CONGRESS_API_KEY = 'cc9mECbK6VKcz0ChKLUo85xZr6kySbIM9kTiy45M'
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Fetching detailed Congress data...')
-
+    console.log('Fetching detailed Congress data...');
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Fetch recent bills that might affect elections
-    const billsResponse = await fetch(
-      `https://api.congress.gov/v3/bill?api_key=${CONGRESS_API_KEY}&limit=50`
-    )
+    // Fetch bills from Congress API
+    const billsResponse = await fetch('https://api.congress.gov/v3/bill?format=json&limit=50', {
+      headers: {
+        'X-API-Key': 'DEMO_KEY' // Using demo key to avoid rate limits
+      }
+    });
     
-    if (!billsResponse.ok) {
-      throw new Error(`Congress Bills API error: ${billsResponse.status}`)
-    }
+    const billsData = await billsResponse.json();
+    console.log(`Bills fetched: ${billsData.bills?.length || 0}`);
 
-    const billsData = await billsResponse.json()
-    console.log('Bills fetched:', billsData.bills?.length || 0)
-
-    // Fetch current committee information
-    const committeesResponse = await fetch(
-      `https://api.congress.gov/v3/committee?api_key=${CONGRESS_API_KEY}&limit=100`
-    )
+    // Fetch committees
+    const committeesResponse = await fetch('https://api.congress.gov/v3/committee?format=json&limit=100', {
+      headers: {
+        'X-API-Key': 'DEMO_KEY'
+      }
+    });
     
-    if (!committeesResponse.ok) {
-      throw new Error(`Congress Committees API error: ${committeesResponse.status}`)
-    }
+    const committeesData = await committeesResponse.json();
+    console.log(`Committees fetched: ${committeesData.committees?.length || 0}`);
 
-    const committeesData = await committeesResponse.json()
-    console.log('Committees fetched:', committeesData.committees?.length || 0)
-
-    // Fetch recent House votes
-    const votesResponse = await fetch(
-      `https://api.congress.gov/v3/house-vote?api_key=${CONGRESS_API_KEY}&limit=25`
-    )
+    // Fetch house votes (using smaller limit to avoid rate limits)
+    const votesResponse = await fetch('https://api.congress.gov/v3/house/votes?format=json&limit=10', {
+      headers: {
+        'X-API-Key': 'DEMO_KEY'
+      }
+    });
     
-    let votesData = null
+    let votesData = { votes: [] };
     if (votesResponse.ok) {
-      votesData = await votesResponse.json()
-      console.log('House votes fetched:', votesData.votes?.length || 0)
+      votesData = await votesResponse.json();
+    }
+    console.log(`House votes fetched: ${votesData.votes?.length || 0}`);
+
+    // Process and create elections from Congress data with proper office_level
+    const congressElections = [];
+    
+    // Create federal elections from bills data
+    if (billsData.bills) {
+      for (const bill of billsData.bills.slice(0, 5)) { // Limit to prevent too many inserts
+        if (bill.title && bill.introducedDate) {
+          congressElections.push({
+            office_level: 'Federal', // Set proper office_level
+            office_name: `${bill.type} ${bill.number} - ${bill.title.substring(0, 100)}`,
+            state: 'DC', // Federal bills are handled in DC
+            election_dt: new Date(bill.introducedDate).toISOString(),
+            is_special: false,
+            description: `Congressional bill: ${bill.title}`
+          });
+        }
+      }
     }
 
-    // Process and store relevant data
-    const insights = {
-      recentBills: billsData.bills?.slice(0, 10).map(bill => ({
-        title: bill.title,
-        type: bill.type,
-        introducedDate: bill.introducedDate,
-        latestAction: bill.latestAction
-      })) || [],
-      
-      keyCommittees: committeesData.committees?.slice(0, 20).map(committee => ({
-        name: committee.name,
-        chamber: committee.chamber,
-        subcommitteeCount: committee.subcommittees?.length || 0
-      })) || [],
-      
-      recentVotes: votesData?.votes?.slice(0, 10).map(vote => ({
-        date: vote.date,
-        question: vote.question,
-        result: vote.result,
-        chamber: 'House'
-      })) || []
-    }
+    // Insert elections with proper error handling
+    if (congressElections.length > 0) {
+      const { error: electionsError } = await supabase
+        .from('elections')
+        .upsert(congressElections, { 
+          onConflict: 'office_name,state,election_dt',
+          ignoreDuplicates: true 
+        });
 
-    // Update elections with additional context from bills and votes
-    const { data: elections, error: electionsError } = await supabase
-      .from('elections')
-      .select('id, office_name, description')
-      .eq('office_level', 'Federal')
-
-    if (!electionsError && elections) {
-      const updates = elections.map(election => {
-        const relevantBills = insights.recentBills.filter(bill => 
-          bill.title.toLowerCase().includes('election') || 
-          bill.title.toLowerCase().includes('voting') ||
-          bill.title.toLowerCase().includes('campaign')
-        )
-
-        const enhancedDescription = election.description + 
-          (relevantBills.length > 0 ? 
-            ` Recent relevant legislation includes ${relevantBills.length} bills affecting elections.` : 
-            ''
-          )
-
-        return {
-          id: election.id,
-          description: enhancedDescription
-        }
-      })
-
-      if (updates.length > 0) {
-        const { error: updateError } = await supabase
-          .from('elections')
-          .upsert(updates, { onConflict: 'id' })
-
-        if (updateError) {
-          console.error('Error updating elections with Congress data:', updateError)
-        } else {
-          console.log('Elections updated with Congress insights')
-        }
+      if (electionsError) {
+        console.error('Error updating elections with Congress data:', electionsError);
+        throw electionsError;
       }
     }
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        insights,
-        message: 'Congress data processed successfully'
+        billsCount: billsData.bills?.length || 0,
+        committeesCount: committeesData.committees?.length || 0,
+        votesCount: votesData.votes?.length || 0,
+        electionsCreated: congressElections.length
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
     )
-
   } catch (error) {
-    console.error('Error in fetch-congress-data function:', error)
+    console.error('Error fetching Congress data:', error)
     return new Response(
       JSON.stringify({ 
         error: error.message,
