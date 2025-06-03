@@ -14,12 +14,12 @@ export async function testElectionDataComprehensive(supabase: any, testResults: 
     
     console.log(`Total elections in database: ${totalElections}`);
 
-    // UPDATED: More realistic minimum expectations for initial testing
-    const MINIMUM_EXPECTED_ELECTIONS = 10; // Reduced from 150 for initial testing
-    if (totalElections < MINIMUM_EXPECTED_ELECTIONS) {
-      testResults.failed.push(`CRITICAL: Only ${totalElections} elections found, expected at least ${MINIMUM_EXPECTED_ELECTIONS}. Data ingestion incomplete.`);
+    // STRICT requirement for launch readiness
+    const MINIMUM_REQUIRED_ELECTIONS = 160; // User requirement
+    if (totalElections < MINIMUM_REQUIRED_ELECTIONS) {
+      testResults.failed.push(`CRITICAL: Only ${totalElections} elections found, MUST have at least ${MINIMUM_REQUIRED_ELECTIONS} for launch. Platform is NOT launch-ready.`);
     } else {
-      testResults.passed.push(`Election Count: ${totalElections} elections loaded (meets minimum threshold)`);
+      testResults.passed.push(`Election Count: ${totalElections} elections loaded (meets ${MINIMUM_REQUIRED_ELECTIONS}+ requirement)`);
     }
 
     // Test election distribution by level
@@ -37,25 +37,51 @@ export async function testElectionDataComprehensive(supabase: any, testResults: 
 
     console.log('Elections by level:', levelCounts);
 
-    // Check for federal elections (reduced expectations)
-    if (!levelCounts['Federal'] || levelCounts['Federal'] < 2) {
-      testResults.warnings.push(`LIMITED: Federal elections (found ${levelCounts['Federal'] || 0}, expected 2+). Some federal races may be missing.`);
+    // Check for federal elections (strict requirements)
+    if (!levelCounts['Federal'] || levelCounts['Federal'] < 50) {
+      testResults.failed.push(`INSUFFICIENT: Federal elections (found ${levelCounts['Federal'] || 0}, need 50+ for all states/territories)`);
     } else {
-      testResults.passed.push(`Federal Elections: ${levelCounts['Federal']} found`);
+      testResults.passed.push(`Federal Elections: ${levelCounts['Federal']} found (adequate coverage)`);
     }
 
-    // Check for state elections (reduced expectations)
-    if (!levelCounts['State'] || levelCounts['State'] < 2) {
-      testResults.warnings.push(`LIMITED: State elections (found ${levelCounts['State'] || 0}, expected 2+). Some state races may be missing.`);
+    // Check for state elections (strict requirements)
+    if (!levelCounts['State'] || levelCounts['State'] < 50) {
+      testResults.failed.push(`INSUFFICIENT: State elections (found ${levelCounts['State'] || 0}, need 50+ for all states)`);
     } else {
-      testResults.passed.push(`State Elections: ${levelCounts['State']} found`);
+      testResults.passed.push(`State Elections: ${levelCounts['State']} found (adequate coverage)`);
     }
 
-    // Check for local elections (reduced expectations)
-    if (!levelCounts['Local'] || levelCounts['Local'] < 2) {
-      testResults.warnings.push(`LIMITED: Local elections (found ${levelCounts['Local'] || 0}, expected 2+). Local races may be missing.`);
+    // Check for local elections (strict requirements)
+    if (!levelCounts['Local'] || levelCounts['Local'] < 50) {
+      testResults.failed.push(`INSUFFICIENT: Local elections (found ${levelCounts['Local'] || 0}, need 50+ for comprehensive local coverage)`);
     } else {
-      testResults.passed.push(`Local Elections: ${levelCounts['Local']} found`);
+      testResults.passed.push(`Local Elections: ${levelCounts['Local']} found (adequate coverage)`);
+    }
+
+    // Test state coverage - must have elections in all 50 states + territories
+    const { data: stateData, error: stateError } = await supabase
+      .from('elections')
+      .select('state')
+      .not('state', 'is', null);
+
+    if (stateError) throw new Error(`State coverage query failed: ${stateError.message}`);
+
+    const uniqueStates = [...new Set(stateData.map(e => e.state))];
+    const requiredStatesAndTerritories = [
+      'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+      'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+      'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+      'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+      'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+      'DC' // At minimum all 50 states + DC
+    ];
+
+    const missingStates = requiredStatesAndTerritories.filter(state => !uniqueStates.includes(state));
+    
+    if (missingStates.length > 0) {
+      testResults.failed.push(`INCOMPLETE COVERAGE: Missing elections for states/territories: ${missingStates.join(', ')}`);
+    } else {
+      testResults.passed.push(`Geographic Coverage: Elections found for all ${uniqueStates.length} states/territories`);
     }
 
     // Test upcoming vs past elections
@@ -67,23 +93,10 @@ export async function testElectionDataComprehensive(supabase: any, testResults: 
     if (upcomingError) throw new Error(`Upcoming elections query failed: ${upcomingError.message}`);
 
     const upcomingCount = upcomingElections?.length || 0;
-    if (upcomingCount < 5) {
-      testResults.warnings.push(`LIMITED: Only ${upcomingCount} upcoming elections found. May need more future elections for better user experience.`);
+    if (upcomingCount < 100) {
+      testResults.failed.push(`INSUFFICIENT UPCOMING: Only ${upcomingCount} upcoming elections found. Need 100+ for meaningful countdown experience.`);
     } else {
       testResults.passed.push(`Upcoming Elections: ${upcomingCount} elections scheduled`);
-    }
-
-    // Test election cycles
-    const { data: cycles, error: cyclesError } = await supabase
-      .from('election_cycles')
-      .select('*');
-    
-    if (cyclesError) throw new Error(`Election cycles query failed: ${cyclesError.message}`);
-
-    if (!cycles || cycles.length < 1) {
-      testResults.warnings.push(`LIMITED: Election cycles (found ${cycles?.length || 0}, expected 1+). Election cycles may need setup.`);
-    } else {
-      testResults.passed.push(`Election Cycles: ${cycles.length} cycles configured`);
     }
 
     // Test candidates data
@@ -93,15 +106,17 @@ export async function testElectionDataComprehensive(supabase: any, testResults: 
     
     if (candidatesCountError) throw new Error(`Candidates count query failed: ${candidatesCountError.message}`);
 
-    if (totalCandidates < 5) {
-      testResults.warnings.push(`LIMITED: Only ${totalCandidates} candidates found. May need more candidate data for comprehensive coverage.`);
+    if (totalCandidates < 100) {
+      testResults.warnings.push(`LIMITED: Only ${totalCandidates} candidates found. Consider adding more candidate data for better user experience.`);
     } else {
       testResults.passed.push(`Candidates: ${totalCandidates} candidates loaded`);
     }
 
-    // Overall data completeness assessment
-    if (totalElections >= 10 && upcomingCount >= 3) {
-      testResults.passed.push('Data Completeness: Basic election data structure is functional');
+    // Overall launch readiness assessment
+    if (totalElections >= MINIMUM_REQUIRED_ELECTIONS && upcomingCount >= 100 && missingStates.length === 0) {
+      testResults.passed.push('🚀 LAUNCH READY: Platform meets all requirements for comprehensive election coverage');
+    } else {
+      testResults.failed.push('❌ NOT LAUNCH READY: Platform lacks sufficient election data for launch');
     }
 
   } catch (error) {
