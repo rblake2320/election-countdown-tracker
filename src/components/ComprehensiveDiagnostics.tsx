@@ -6,6 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 
+// Helper function to invoke edge functions with timeout
+const invokeWithTimeout = async <T>(
+  fnName: string,
+  timeout = 15000,
+): Promise<{ data: T | null; error: any | null }> => {
+  return Promise.race([
+    supabase.functions.invoke<T>(fnName),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), timeout),
+    ),
+  ]) as Promise<{ data: T | null; error: any | null }>;
+};
+
 interface DiagnosticResult {
   category: string;
   test: string;
@@ -196,23 +209,26 @@ export const ComprehensiveDiagnostics: React.FC = () => {
       try {
         console.log(`Testing ${func.name}...`);
         
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        const { data, error } = await supabase.functions.invoke(func.name, {
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
+        const { data, error } = await invokeWithTimeout(func.name);
 
         if (error) {
-          diagnostics.edgeFunctions.push({
-            category: 'Edge Functions',
-            test: func.description,
-            status: 'fail',
-            message: `Function error: ${error.message}`,
-            details: error
-          });
+          if (error.message === 'Timeout') {
+            diagnostics.edgeFunctions.push({
+              category: 'Edge Functions',
+              test: func.description,
+              status: 'warning',
+              message: 'Function timeout (may be slow)',
+              details: { timeout: true }
+            });
+          } else {
+            diagnostics.edgeFunctions.push({
+              category: 'Edge Functions',
+              test: func.description,
+              status: 'fail',
+              message: `Function error: ${error.message}`,
+              details: error
+            });
+          }
         } else {
           diagnostics.edgeFunctions.push({
             category: 'Edge Functions',
@@ -223,23 +239,13 @@ export const ComprehensiveDiagnostics: React.FC = () => {
           });
         }
       } catch (error) {
-        if (error.name === 'AbortError') {
-          diagnostics.edgeFunctions.push({
-            category: 'Edge Functions',
-            test: func.description,
-            status: 'warning',
-            message: 'Function timeout (may be slow)',
-            details: { timeout: true }
-          });
-        } else {
-          diagnostics.edgeFunctions.push({
-            category: 'Edge Functions',
-            test: func.description,
-            status: 'fail',
-            message: `Function unavailable: ${error.message}`,
-            details: error
-          });
-        }
+        diagnostics.edgeFunctions.push({
+          category: 'Edge Functions',
+          test: func.description,
+          status: 'fail',
+          message: `Function unavailable: ${error.message}`,
+          details: error
+        });
       }
     }
   };
@@ -249,7 +255,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
 
     try {
       // Test if we can trigger data ingestion
-      const { data, error } = await supabase.functions.invoke('fetch-fec-data');
+      const { data, error } = await invokeWithTimeout('fetch-fec-data');
 
       if (error) {
         diagnostics.dataIngestion.push({
@@ -361,13 +367,13 @@ export const ComprehensiveDiagnostics: React.FC = () => {
     console.log('🔒 Testing security and RLS policies...');
 
     try {
-      // Test RLS policies on critical tables
+      // Test RLS policies on critical tables - using type assertion for diagnostic purposes
       const tables = ['elections', 'candidates', 'interaction_logs', 'user_analytics'];
 
       for (const table of tables) {
         try {
           const { data, error } = await supabase
-            .from(table)
+            .from<any>(table)
             .select('*')
             .limit(1);
 
