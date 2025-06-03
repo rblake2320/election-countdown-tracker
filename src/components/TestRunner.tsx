@@ -57,9 +57,10 @@ export const TestRunner: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <Tabs defaultValue="test-suite" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="test-suite">Comprehensive Test Suite</TabsTrigger>
           <TabsTrigger value="data-diagnostics">Data Ingestion Diagnostics</TabsTrigger>
+          <TabsTrigger value="system-diagnostics">System Diagnostics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="test-suite" className="space-y-6">
@@ -83,6 +84,20 @@ export const TestRunner: React.FC = () => {
         
         <TabsContent value="data-diagnostics">
           <DataIngestionDiagnostics />
+        </TabsContent>
+
+        <TabsContent value="system-diagnostics">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">
+              For detailed system diagnostics, visit the dedicated diagnostics page.
+            </p>
+            <a 
+              href="/system-diagnostics" 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors inline-block"
+            >
+              Open System Diagnostics
+            </a>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
