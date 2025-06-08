@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, RefreshCw, Database } from 'lucide-react';
+import { AlertTriangle, CheckCircle, RefreshCw, Database, Bug, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,14 +16,22 @@ export const ComprehensiveDataStatus: React.FC<ComprehensiveDataStatusProps> = (
   const [isLoading, setIsLoading] = useState(false);
   const [isEnsuring, setIsEnsuring] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+
+  const addDebugInfo = (message: string) => {
+    setDebugInfo(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
 
   const checkDataStatus = async () => {
     setIsLoading(true);
+    addDebugInfo('Starting data status check...');
     try {
       const status = await comprehensiveElectionService.verifyDataCompleteness();
       setDataStatus(status);
+      addDebugInfo(`Status check complete: ${status.totalElections} elections found`);
     } catch (error) {
       console.error('Error checking data status:', error);
+      addDebugInfo(`Status check failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -32,17 +40,49 @@ export const ComprehensiveDataStatus: React.FC<ComprehensiveDataStatusProps> = (
   const ensureFullData = async () => {
     setIsEnsuring(true);
     setLastResult(null);
+    addDebugInfo('Starting comprehensive data generation...');
+    
     try {
-      const result = await comprehensiveElectionService.ensureComprehensiveData();
-      setLastResult(result.message);
-      setDataStatus(result.dataStatus);
+      // First, let's try to trigger the edge function directly with more debugging
+      console.log('🔄 Triggering fetch-fec-data edge function...');
+      addDebugInfo('Calling fetch-fec-data edge function...');
       
-      if (result.success && onDataEnsured) {
+      const { data: functionResult, error: functionError } = await import('@/integrations/supabase/client')
+        .then(({ supabase }) => supabase.functions.invoke('fetch-fec-data'));
+
+      if (functionError) {
+        console.error('❌ Edge function error:', functionError);
+        addDebugInfo(`Edge function error: ${functionError.message}`);
+        throw new Error(`Edge function failed: ${functionError.message}`);
+      }
+
+      console.log('✅ Edge function result:', functionResult);
+      addDebugInfo(`Edge function completed: ${JSON.stringify(functionResult)}`);
+
+      // Wait longer for data to be committed
+      addDebugInfo('Waiting for data to be committed...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Force refresh the data status
+      addDebugInfo('Checking updated data status...');
+      const updatedStatus = await comprehensiveElectionService.verifyDataCompleteness();
+      setDataStatus(updatedStatus);
+
+      const resultMessage = updatedStatus.isComprehensive 
+        ? `🎉 Success! Generated comprehensive election data: ${updatedStatus.totalElections} total elections across ${updatedStatus.statesCovered.length} states/territories`
+        : `⚠️ Partial success. Generated ${updatedStatus.totalElections} elections, but still missing: ${updatedStatus.missingRequirements.join(', ')}`;
+
+      setLastResult(resultMessage);
+      addDebugInfo(resultMessage);
+      
+      if (updatedStatus.isComprehensive && onDataEnsured) {
         onDataEnsured();
       }
     } catch (error) {
-      console.error('Error ensuring full data:', error);
-      setLastResult(`Error: ${error.message}`);
+      console.error('❌ Error ensuring full data:', error);
+      const errorMessage = `Failed to ensure comprehensive data: ${error.message}`;
+      setLastResult(errorMessage);
+      addDebugInfo(errorMessage);
     } finally {
       setIsEnsuring(false);
     }
@@ -72,13 +112,14 @@ export const ComprehensiveDataStatus: React.FC<ComprehensiveDataStatusProps> = (
         <CardTitle className="flex items-center space-x-2">
           <Database className="w-6 h-6" />
           <span>Election Data Status</span>
+          {isEnsuring && <Clock className="w-5 h-5 animate-spin text-blue-600" />}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex space-x-4">
           <Button 
             onClick={checkDataStatus} 
-            disabled={isLoading}
+            disabled={isLoading || isEnsuring}
             variant="outline"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -91,13 +132,30 @@ export const ComprehensiveDataStatus: React.FC<ComprehensiveDataStatusProps> = (
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Database className={`w-4 h-4 mr-2 ${isEnsuring ? 'animate-pulse' : ''}`} />
-            {isEnsuring ? 'Ensuring Full Data...' : 'Ensure Full Dataset'}
+            {isEnsuring ? 'Generating Full Dataset...' : 'Ensure Full Dataset'}
           </Button>
         </div>
 
+        {/* Debug Information Panel */}
+        {debugInfo.length > 0 && (
+          <div className="p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center space-x-2 mb-2">
+              <Bug className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Debug Log</span>
+            </div>
+            <div className="space-y-1">
+              {debugInfo.map((info, index) => (
+                <div key={index} className="text-xs text-gray-600 font-mono">
+                  {info}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {lastResult && (
-          <div className={`p-4 rounded-lg border ${lastResult.includes('Success') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-            <p className={`text-sm ${lastResult.includes('Success') ? 'text-green-700' : 'text-red-700'}`}>
+          <div className={`p-4 rounded-lg border ${lastResult.includes('Success') || lastResult.includes('🎉') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <p className={`text-sm ${lastResult.includes('Success') || lastResult.includes('🎉') ? 'text-green-700' : 'text-red-700'}`}>
               {lastResult}
             </p>
           </div>
@@ -165,6 +223,11 @@ export const ComprehensiveDataStatus: React.FC<ComprehensiveDataStatusProps> = (
                   {dataStatus.statesCovered.length} / 51+
                 </Badge>
               </div>
+              {dataStatus.statesCovered.length > 0 && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Current: {dataStatus.statesCovered.join(', ')}
+                </div>
+              )}
             </div>
 
             {/* Missing Requirements */}
