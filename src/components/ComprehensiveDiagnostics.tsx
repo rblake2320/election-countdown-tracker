@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Database, AlertTriangle, CheckCircle, XCircle, Loader2, Bug } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -183,7 +182,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
         message: cyclesError ? cyclesError.message : `Found ${cycles?.length || 0} election cycles`
       });
 
-    } catch (error) {
+    } catch (error: any) {
       diagnostics.database.push({
         category: 'Database',
         test: 'Overall Database Test',
@@ -238,7 +237,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
             details: data
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         diagnostics.edgeFunctions.push({
           category: 'Edge Functions',
           test: func.description,
@@ -309,7 +308,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       diagnostics.dataIngestion.push({
         category: 'Data Ingestion',
         test: 'Data Ingestion Process',
@@ -352,7 +351,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       diagnostics.authentication.push({
         category: 'Authentication',
         test: 'Authentication System',
@@ -373,7 +372,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
       for (const table of tables) {
         try {
           const { data, error } = await supabase
-            .from<any>(table)
+            .from(table as any)
             .select('*')
             .limit(1);
 
@@ -405,7 +404,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
               details: { recordCount: data?.length }
             });
           }
-        } catch (err) {
+        } catch (err: any) {
           diagnostics.security.push({
             category: 'Security',
             test: `Table Test - ${table}`,
@@ -415,7 +414,7 @@ export const ComprehensiveDiagnostics: React.FC = () => {
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
       diagnostics.security.push({
         category: 'Security',
         test: 'Security System',
