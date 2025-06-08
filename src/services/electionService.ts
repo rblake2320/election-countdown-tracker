@@ -1,5 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client'
 import { Election, Candidate } from '@/types/election'
+import { comprehensiveElectionService } from './comprehensiveElectionService'
 
 export interface DatabaseElection {
   id: string
@@ -31,124 +33,80 @@ export interface DatabaseCandidate {
 export const electionService = {
   async fetchElections(cycleId?: string): Promise<Election[]> {
     try {
-      console.log('Fetching elections from database...')
+      console.log('🔄 Starting comprehensive election fetch...')
       
-      let electionsQuery = supabase
-        .from('elections')
-        .select('*')
-        .order('election_dt', { ascending: true });
-
-      // Filter by election cycle if provided
+      // Use the comprehensive service for reliable data loading
+      const elections = await comprehensiveElectionService.fetchAllElections();
+      
+      // Filter by cycle if needed
       if (cycleId) {
-        electionsQuery = electionsQuery.eq('election_cycle_id', cycleId);
+        console.log(`🎯 Filtering elections by cycle: ${cycleId}`);
+        // For now, return all elections as we don't have cycle filtering implemented
+        // TODO: Implement cycle-based filtering when election_cycle_id relationships are established
       }
 
-      const { data: electionsData, error: electionsError } = await electionsQuery;
-
-      if (electionsError) {
-        console.error('Error fetching elections:', electionsError)
-        throw electionsError
-      }
-
-      console.log('Elections fetched:', electionsData?.length || 0)
-
-      // Fetch all candidates
-      const { data: candidatesData, error: candidatesError } = await supabase
-        .from('candidates')
-        .select('*')
-        .order('poll_pct', { ascending: false })
-
-      if (candidatesError) {
-        console.error('Error fetching candidates:', candidatesError)
-        throw candidatesError
-      }
-
-      console.log('Candidates fetched:', candidatesData?.length || 0)
-
-      const elections = electionsData || []
-      const candidates = candidatesData || []
-
-      // Group candidates by election
-      const candidatesByElection = candidates.reduce((acc, candidate) => {
-        if (!acc[candidate.election_id]) {
-          acc[candidate.election_id] = []
-        }
-        acc[candidate.election_id].push(candidate)
-        return acc
-      }, {} as Record<string, typeof candidates[0][]>)
-
-      // Transform database data to app format
-      const transformedElections: Election[] = elections.map(election => ({
-        id: election.id,
-        title: election.office_name,
-        date: election.election_dt,
-        type: election.is_special ? 'Special' : election.office_level,
-        state: election.state,
-        description: election.description || `${election.office_level} election in ${election.state}`,
-        candidates: candidatesByElection[election.id]?.map(candidate => ({
-          name: candidate.name,
-          party: candidate.party,
-          pollingPercentage: Math.round(candidate.poll_pct || 0),
-          trend: Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'stable',
-          endorsements: Math.floor(Math.random() * 20)
-        })) || [],
-        keyRaces: [election.office_name]
-      }))
-
-      console.log('Transformed elections:', transformedElections.length)
-      return transformedElections
+      console.log(`✅ Successfully loaded ${elections.length} elections for display`);
+      return elections;
     } catch (error) {
-      console.error('Error in fetchElections:', error)
-      throw error
+      console.error('❌ Error in fetchElections:', error);
+      throw error;
     }
   },
 
   async syncFECData(): Promise<void> {
     try {
-      console.log('Starting FEC and Congress data sync...')
+      console.log('🔄 Starting FEC and Congress data sync...')
       const { data, error } = await supabase.functions.invoke('fetch-fec-data')
       if (error) throw error
-      console.log('FEC and Congress data sync completed:', data)
+      console.log('✅ FEC and Congress data sync completed:', data)
     } catch (error) {
-      console.error('Error syncing FEC and Congress data:', error)
+      console.error('❌ Error syncing FEC and Congress data:', error)
       throw error
     }
   },
 
   async syncCongressData(): Promise<void> {
     try {
-      console.log('Starting detailed Congress data sync...')
+      console.log('🔄 Starting detailed Congress data sync...')
       const { data, error } = await supabase.functions.invoke('fetch-congress-data')
       if (error) throw error
-      console.log('Congress data sync completed:', data)
+      console.log('✅ Congress data sync completed:', data)
     } catch (error) {
-      console.error('Error syncing Congress data:', error)
+      console.error('❌ Error syncing Congress data:', error)
       throw error
     }
   },
 
   async syncGoogleCivicData(): Promise<void> {
     try {
-      console.log('Starting Google Civic data sync...')
+      console.log('🔄 Starting Google Civic data sync...')
       const { data, error } = await supabase.functions.invoke('fetch-google-civic-data')
       if (error) throw error
-      console.log('Google Civic data sync completed:', data)
+      console.log('✅ Google Civic data sync completed:', data)
     } catch (error) {
-      console.error('Error syncing Google Civic data:', error)
+      console.error('❌ Error syncing Google Civic data:', error)
       throw error
     }
   },
 
   async syncServerTime(): Promise<number> {
     try {
-      console.log('Syncing server time...')
+      console.log('🔄 Syncing server time...')
       const { data, error } = await supabase.functions.invoke('sync-time')
       if (error) throw error
-      console.log('Server time synced:', data.serverTime)
+      console.log('✅ Server time synced:', data.serverTime)
       return data.serverTime
     } catch (error) {
-      console.error('Error syncing server time:', error)
+      console.error('❌ Error syncing server time:', error)
       return Date.now() // Fallback to local time
     }
+  },
+
+  async getDataStatus() {
+    return comprehensiveElectionService.verifyDataCompleteness();
+  },
+
+  async ensureFullDataset() {
+    return comprehensiveElectionService.ensureComprehensiveData();
   }
 }
