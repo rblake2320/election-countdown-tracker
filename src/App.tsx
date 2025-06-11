@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import TestSuite from "./pages/TestSuite";
 import SystemDiagnostics from "./pages/SystemDiagnostics";
+import MCPEnhancedDashboard from "./pages/MCPEnhancedDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/test-suite" element={<TestSuite />} />
           <Route path="/system-diagnostics" element={<SystemDiagnostics />} />
+          <Route path="/mcp-dashboard" element={<MCPEnhancedDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
